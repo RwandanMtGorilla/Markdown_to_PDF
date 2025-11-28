@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markdown to HTML Converter</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: #f5f5f5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #24292e;
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    header .header-content {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    header p {
+      font-size: 12px;
+      color: #8b949e;
+      margin: 0;
+    }
+
+    header .github-link {
+      color: white;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+
+    header .github-link:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    header .github-link svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .container {
+      flex: 1;
+      display: flex;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    .panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: white;
+      border-right: 1px solid #d0d7de;
+    }
+
+    .panel:last-child {
+      border-right: none;
+    }
+
+    .panel-header {
+      background: #f6f8fa;
+      padding: 8px 12px;
+      border-bottom: 1px solid #d0d7de;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .mode-switcher {
+      display: flex;
+      gap: 4px;
+    }
+
+    .mode-btn {
+      padding: 6px 16px;
+      background: white;
+      color: #57606a;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mode-btn:hover {
+      background: #f3f4f6;
+    }
+
+    .mode-btn.active {
+      background: #0969da;
+      color: white;
+      border-color: #0969da;
+    }
+
+    .panel-content {
+      flex: 1;
+      padding: 16px;
+      overflow: auto;
+    }
+
+    .input-mode,
+    .view-mode {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100%;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: #0969da;
+      box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.1);
+    }
+
+    .css-hint {
+      margin-top: 12px;
+      padding: 12px;
+      background: #fff8c5;
+      border: 1px solid #f0e68c;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .css-hint p {
+      margin: 0;
+      color: #24292e;
+    }
+
+    .css-hint a {
+      color: #0969da;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .css-hint a:hover {
+      text-decoration: underline;
+    }
+
+    .preview-area {
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 20px;
+      background: white;
+      min-height: 100%;
+      overflow: auto;
+    }
+
+    .controls {
+      padding: 12px 16px;
+      background: #f6f8fa;
+      border-top: 1px solid #d0d7de;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .control-divider {
+      width: 1px;
+      height: 24px;
+      background: #d0d7de;
+      margin: 0 4px;
+    }
+
+    label {
+      font-size: 13px;
+      color: #24292e;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    input[type="checkbox"] {
+      cursor: pointer;
+    }
+
+    input[type="text"] {
+      padding: 6px 12px;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: #0969da;
+      box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.1);
+    }
+
+    button {
+      padding: 8px 16px;
+      background: #2da44e;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #2c974b;
+    }
+
+    button:active {
+      background: #298e46;
+    }
+
+    button.secondary {
+      background: #f6f8fa;
+      color: #24292e;
+      border: 1px solid #d0d7de;
+    }
+
+    button.secondary:hover {
+      background: #f3f4f6;
+    }
+
+    .status {
+      font-size: 12px;
+      color: #57606a;
+      margin-left: auto;
+    }
+
+    /* 响应式布局 */
+    @media (max-width: 1024px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .panel {
+        border-right: none;
+        border-bottom: 1px solid #d0d7de;
+      }
+
+      .controls {
+        overflow-x: auto;
+      }
+
+      .control-divider {
+        display: none;
+      }
+
+      header .header-content {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      header {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .github-link {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .mode-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+    }
+
+    /* 加载提示 */
+    .loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 20px 40px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+      z-index: 1000;
+    }
+
+    .loading.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>Markdown2HTML</h1>
+      <p>轻量，美观的markdown转HTML。(另存为+打印可以转pdf！)</p>
+    </div>
+    <a href="https://github.com/RwandanMtGorilla/vscode-markdown-pdf" target="_blank" rel="noopener" class="github-link">
+      <svg viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+      <span>GitHub</span>
+    </a>
+  </header>
+
+  <div class="container">
+    <!-- 左侧面板: Markdown / CSS 输入 -->
+    <div class="panel left-panel">
+      <div class="panel-header">
+        <div class="mode-switcher">
+          <button class="mode-btn active" data-mode="markdown">Markdown 编辑</button>
+          <button class="mode-btn" data-mode="css">CSS 样式</button>
+        </div>
+      </div>
+      <div class="panel-content">
+        <!-- Markdown 输入区 -->
+        <div id="markdownMode" class="input-mode">
+          <textarea id="markdownInput" placeholder="在这里输入 Markdown 内容...
+支持:
+- 标准 Markdown 语法
+- 代码语法高亮
+- Mermaid 图表
+- Emoji :smile:
+- 复选框 - [ ]
+- 自定义容器 ::: warning
+- YAML Front Matter
+"># 欢迎使用 Markdown2HTML
+
+这是一个**功能强大**的 Markdown 转换器! (另存为+打印可以转pdf！)
+
+## 特性
+
+- ✅ 支持标准 Markdown 语法
+- ✅ 代码语法高亮
+- ✅ Mermaid 图表
+- ✅ Emoji 表情 :smile: :rocket:
+- ✅ 复选框
+
+## 代码示例
+
+```javascript
+function hello() {
+  console.log('Hello, World!');
+}
+```
+
+## 复选框
+
+- [x] 已完成的任务
+- [ ] 待完成的任务
+
+## Mermaid 图表
+
+```mermaid
+graph LR
+    A[开始] --> B[处理]
+    B --> C[结束]
+```
+
+## 表格
+
+| 功能 | 状态 |
+|------|------|
+| Markdown | ✅ |
+| 代码高亮 | ✅ |
+| Mermaid | ✅ |
+
+> 这是一个引用块
+> 可以包含多行文本
+</textarea>
+        </div>
+
+        <!-- CSS 编辑区 -->
+        <div id="cssMode" class="input-mode" style="display: none;">
+          <textarea id="cssInput" placeholder="在这里输入自定义 CSS 样式...">/* 自定义样式示例 */
+body {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+h1 {
+  color: #2c3e50;
+}
+
+blockquote {
+  border-left-color: #3498db;
+  background-color: #ecf0f1;
+}</textarea>
+          <div class="css-hint">
+            <p>💡 可以从 <a href="https://theme.typora.io/" target="_blank" rel="noopener">Typora 主题站</a> 下载精美的 CSS 样式</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧面板: HTML 预览 / 代码 -->
+    <div class="panel right-panel">
+      <div class="panel-header">
+        <div class="mode-switcher">
+          <button class="mode-btn active" data-mode="preview">HTML 预览</button>
+          <button class="mode-btn" data-mode="code">HTML 代码</button>
+        </div>
+      </div>
+      <div class="panel-content">
+        <!-- HTML 预览区 -->
+        <div id="previewMode" class="view-mode">
+          <div class="preview-area" id="preview">
+            <p style="color: #666;">在左侧输入 Markdown,点击"转换"按钮查看预览</p>
+          </div>
+        </div>
+
+        <!-- HTML 代码区 -->
+        <div id="codeMode" class="view-mode" style="display: none;">
+          <textarea id="htmlOutput" readonly placeholder="转换后的 HTML 代码将显示在这里..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <!-- 功能选项 -->
+    <div class="control-group">
+      <label>
+        <input type="checkbox" id="configEmoji" checked>
+        Emoji
+      </label>
+    </div>
+
+    <div class="control-group">
+      <label>
+        <input type="checkbox" id="configBreaks">
+        启用换行
+      </label>
+    </div>
+
+    <div class="control-group">
+      <label>
+        <input type="checkbox" id="configHighlight" checked>
+        代码高亮
+      </label>
+    </div>
+
+    <div class="control-group">
+      <label>
+        <input type="checkbox" id="configGenerateToc">
+        生成目录
+      </label>
+    </div>
+
+    <div class="control-divider"></div>
+
+    <!-- 高级选项 -->
+    <div class="control-group">
+      <label for="highlightStyle">高亮主题:</label>
+      <input type="text" id="highlightStyle" value="github" placeholder="github" style="width: 100px;">
+    </div>
+
+    <div class="control-group">
+      <label for="tocPosition">目录位置:</label>
+      <select id="tocPosition" style="padding: 5px 10px; border: 1px solid #d0d7de; border-radius: 6px; font-size: 12px; cursor: pointer;">
+        <option value="top">顶部</option>
+        <option value="bottom">底部</option>
+        <option value="none" selected>不显示</option>
+      </select>
+    </div>
+
+    <div class="control-divider"></div>
+
+    <!-- 操作按钮 -->
+    <button onclick="copyHtml()" class="secondary">📋 复制 HTML</button>
+    <button onclick="downloadHtml()" class="secondary">💾 下载 HTML</button>
+
+    <span class="status" id="status">准备就绪 - 自动转换已启用</span>
+
+    <!-- 隐藏的配置项 -->
+    <input type="checkbox" id="configDefaultStyles" checked style="display: none;">
+    <input type="number" id="tocDepth" value="3" min="1" max="6" style="display: none;">
+  </div>
+
+  <div class="loading" id="loading">正在转换...</div>
+
+  <!-- 引入必要的库 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.2/markdown-it.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/markdown-it-checkbox@1.1.0/dist/markdown-it-checkbox.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/markdown-it-emoji@2.0.2/dist/markdown-it-emoji.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/markdown-it-container@3.0.0/dist/markdown-it-container.min.js"></script>
+
+  <!-- 引入转换器 -->
+  <script src="src/converter.js"></script>
+
+  <script>
+    let converter;
+
+    // 防抖函数
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // 初始化
+    window.addEventListener('DOMContentLoaded', () => {
+      converter = new MarkdownConverter();
+      updateStatus('准备就绪');
+
+      // 初始化模式切换
+      initModeSwitchers();
+
+      // 初始化自动转换
+      initAutoConvert();
+
+      // 加载默认 CSS
+      loadDefaultCSS();
+
+      // 自动转换(首次加载)
+      setTimeout(() => {
+        convertMarkdown();
+      }, 500);
+    });
+
+    // 初始化自动转换功能
+    function initAutoConvert() {
+      const debouncedConvert = debounce(convertMarkdown, 800);
+
+      // 监听 Markdown 输入变化
+      document.getElementById('markdownInput').addEventListener('input', debouncedConvert);
+
+      // 监听 CSS 输入变化
+      document.getElementById('cssInput').addEventListener('input', debouncedConvert);
+
+      // 监听所有配置项变化
+      document.getElementById('configEmoji').addEventListener('change', convertMarkdown);
+      document.getElementById('configHighlight').addEventListener('change', convertMarkdown);
+      document.getElementById('configGenerateToc').addEventListener('change', convertMarkdown);
+      document.getElementById('configBreaks').addEventListener('change', convertMarkdown);
+      document.getElementById('highlightStyle').addEventListener('change', debouncedConvert);
+      document.getElementById('tocPosition').addEventListener('change', convertMarkdown);
+    }
+
+    // 初始化模式切换器
+    function initModeSwitchers() {
+      // 左侧面板:Markdown / CSS 切换
+      const leftButtons = document.querySelectorAll('.left-panel .mode-btn');
+      leftButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const mode = btn.dataset.mode;
+          switchLeftMode(mode);
+
+          // 更新按钮状态
+          leftButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+
+      // 右侧面板:预览 / 代码 切换
+      const rightButtons = document.querySelectorAll('.right-panel .mode-btn');
+      rightButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const mode = btn.dataset.mode;
+          switchRightMode(mode);
+
+          // 更新按钮状态
+          rightButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+    }
+
+    // 切换左侧模式(Markdown / CSS)
+    function switchLeftMode(mode) {
+      const markdownMode = document.getElementById('markdownMode');
+      const cssMode = document.getElementById('cssMode');
+
+      if (mode === 'markdown') {
+        markdownMode.style.display = 'flex';
+        cssMode.style.display = 'none';
+      } else if (mode === 'css') {
+        markdownMode.style.display = 'none';
+        cssMode.style.display = 'flex';
+      }
+    }
+
+    // 切换右侧模式(预览 / 代码)
+    function switchRightMode(mode) {
+      const previewMode = document.getElementById('previewMode');
+      const codeMode = document.getElementById('codeMode');
+
+      if (mode === 'preview') {
+        previewMode.style.display = 'flex';
+        codeMode.style.display = 'none';
+      } else if (mode === 'code') {
+        previewMode.style.display = 'none';
+        codeMode.style.display = 'flex';
+      }
+    }
+
+    // 加载默认 CSS
+    async function loadDefaultCSS() {
+      try {
+        const response = await fetch('styles/default-custom.css');
+        if (response.ok) {
+          const css = await response.text();
+          document.getElementById('cssInput').value = css;
+        }
+      } catch (error) {
+        console.log('默认 CSS 文件未找到,使用内置样式');
+      }
+    }
+
+    // 转换 Markdown
+    function convertMarkdown() {
+      try {
+        showLoading(true);
+        updateStatus('正在转换...');
+
+        const markdown = document.getElementById('markdownInput').value;
+        const css = document.getElementById('cssInput').value;
+
+        const config = {
+          breaks: document.getElementById('configBreaks').checked,
+          emoji: document.getElementById('configEmoji').checked,
+          highlight: document.getElementById('configHighlight').checked,
+          highlightStyle: document.getElementById('highlightStyle').value || 'github',
+          includeDefaultStyles: document.getElementById('configDefaultStyles').checked,
+          generateToc: document.getElementById('configGenerateToc').checked,
+          tocPosition: document.getElementById('tocPosition').value,
+          tocDepth: parseInt(document.getElementById('tocDepth').value) || 3
+        };
+
+        const html = converter.convert({
+          markdown: markdown,
+          css: css,
+          title: 'Converted Document',
+          config: config
+        });
+
+        // 更新输出
+        document.getElementById('htmlOutput').value = html;
+
+        // 更新预览
+        const previewFrame = document.getElementById('preview');
+        previewFrame.innerHTML = '';
+
+        const iframe = document.createElement('iframe');
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        previewFrame.appendChild(iframe);
+
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(html);
+        iframeDoc.close();
+
+        updateStatus('转换成功!');
+        showLoading(false);
+      } catch (error) {
+        console.error('转换失败:', error);
+        updateStatus('转换失败: ' + error.message);
+        showLoading(false);
+        alert('转换失败: ' + error.message);
+      }
+    }
+
+    // 复制 HTML
+    function copyHtml() {
+      const htmlOutput = document.getElementById('htmlOutput');
+      htmlOutput.select();
+      document.execCommand('copy');
+      updateStatus('HTML 已复制到剪贴板!');
+
+      // 临时提示
+      setTimeout(() => {
+        updateStatus('准备就绪');
+      }, 2000);
+    }
+
+    // 下载 HTML
+    function downloadHtml() {
+      const html = document.getElementById('htmlOutput').value;
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'converted-' + Date.now() + '.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      updateStatus('HTML 文件已下载!');
+
+      setTimeout(() => {
+        updateStatus('准备就绪');
+      }, 2000);
+    }
+
+    // 更新状态
+    function updateStatus(message) {
+      document.getElementById('status').textContent = message;
+    }
+
+    // 显示/隐藏加载提示
+    function showLoading(show) {
+      const loading = document.getElementById('loading');
+      if (show) {
+        loading.classList.add('show');
+      } else {
+        loading.classList.remove('show');
+      }
+    }
+
+    // 快捷键支持
+    document.addEventListener('keydown', (e) => {
+      // Ctrl/Cmd + Enter: 转换
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        convertMarkdown();
+      }
+    });
+  </script>
+</body>
+</html>
